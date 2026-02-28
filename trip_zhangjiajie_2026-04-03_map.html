@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>行程地图：张家界家庭游 2026.4.3–4.8</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, "Microsoft YaHei", sans-serif; }
+    #map { height: 100vh; width: 100%; }
+    .legend {
+      background: white;
+      padding: 12px 16px;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+      font-size: 13px;
+      line-height: 1.8;
+    }
+    .legend h4 { margin-bottom: 6px; font-size: 14px; }
+    .legend-item { display: flex; align-items: center; gap: 8px; }
+    .legend-dot {
+      width: 14px; height: 14px;
+      border-radius: 50%;
+      display: inline-block;
+      border: 2px solid white;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+    }
+    .custom-marker {
+      display: flex; align-items: center; justify-content: center;
+      font-weight: bold; font-size: 12px; color: white;
+      border-radius: 50%; border: 2px solid white;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.35);
+      text-shadow: 0 1px 2px rgba(0,0,0,0.4);
+    }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+  <script>
+    const map = L.map('map');
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; OpenStreetMap contributors',
+      maxZoom: 18
+    }).addTo(map);
+
+    // Day color scheme
+    const dayColors = {
+      1: '#3b82f6', // blue
+      2: '#22c55e', // green
+      3: '#f97316', // orange
+      4: '#ef4444', // red
+      5: '#a855f7', // purple
+      6: '#6b7280'  // gray
+    };
+
+    const dayLabels = {
+      1: 'D1 (4/3 周五) 出发日',
+      2: 'D2 (4/4 周六) 森林公园-阿凡达',
+      3: 'D3 (4/5 周日) 森林公园-金鞭溪',
+      4: 'D4 (4/6 周一) 天门山',
+      5: 'D5 (4/7 周二) 大峡谷+宝峰湖',
+      6: 'D6 (4/8 周三) 回程日'
+    };
+
+    // Activity data: [lat, lng, name, day, time, description]
+    const activities = [
+      // Day 1 - Travel
+      [29.3417, 110.4792, '张家界西站', 1, '14:52', '高铁G6080到达，开始旅程'],
+      [29.3500, 110.4850, '溪布街', 1, '19:30', '傍晚散步，小吃街逛逛'],
+
+      // Day 2 - Forest Park Day 1
+      [29.3473, 110.5386, '武陵源门票站', 2, '09:00', '进入森林公园，购买4日通票'],
+      [29.3350, 110.4364, '百龙天梯', 2, '09:30', '世界最高户外电梯，326米，2分钟升顶'],
+      [29.3470, 110.4340, '袁家界（阿凡达悬浮山）', 2, '10:00', '乾坤柱、天下第一桥，阿凡达取景地'],
+      [29.3680, 110.4450, '天子山', 2, '13:30', '贺龙公园、御笔峰、仙女散花'],
+      [29.3410, 110.4700, '十里画廊', 2, '16:00', '坐小火车观赏奇石造型'],
+
+      // Day 3 - Forest Park Day 2
+      [29.3200, 110.4300, '金鞭溪', 3, '09:15', '7.5公里溪谷步道，野生猴群出没'],
+      [29.3100, 110.4600, '水绕四门', 3, '11:30', '溪水浅滩，孩子们戏水玩耍'],
+      [29.3250, 110.4150, '黄石寨', 3, '13:30', '360°全景，"不到黄石寨，枉到张家界"'],
+
+      // Day 4 - Tianmen Mountain
+      [29.0556, 110.4788, '天门山索道站', 4, '09:00', '世界最长索道，7455米，28分钟空中旅程'],
+      [29.0500, 110.4700, '玻璃栈道', 4, '09:45', '60米透明玻璃栈道，1430米悬崖绝壁上'],
+      [29.0530, 110.4720, '天门山山顶步道', 4, '10:30', '云雾缭绕的山顶森林，各种观景台'],
+      [29.0480, 110.4680, '天门洞', 4, '14:30', '天然穿山溶洞（高131米），999级台阶'],
+      [29.0520, 110.4750, '通天大道（99弯）', 4, '15:30', '11公里盘山公路，99个急弯，像过山车'],
+
+      // Day 5 - Grand Canyon + Baofeng Lake
+      [29.3800, 110.5500, '大峡谷玻璃桥（云天渡）', 5, '10:00', '世界最长最高全透明玻璃桥，430米长，300米高'],
+      [29.3750, 110.5450, '大峡谷', 5, '10:45', '瀑布、绝壁、溪流，峡谷徒步约2小时'],
+      [29.3550, 110.5300, '宝峰湖', 5, '14:00', '高山湖泊游船，土家族歌手湖上演唱'],
+
+      // Day 6 - Departure
+      [29.3417, 110.4792, '张家界西站', 6, '15:20', '高铁G6079返回香港西九龙']
+    ];
+
+    function createColoredIcon(day, label) {
+      const color = dayColors[day];
+      return L.divIcon({
+        className: '',
+        html: `<div class="custom-marker" style="background:${color}; width:28px; height:28px;">${label}</div>`,
+        iconSize: [28, 28],
+        iconAnchor: [14, 14],
+        popupAnchor: [0, -16]
+      });
+    }
+
+    // Group activities by day for polylines
+    const dayGroups = {};
+
+    activities.forEach((a, idx) => {
+      const [lat, lng, name, day, time, desc] = a;
+      const icon = createColoredIcon(day, `D${day}`);
+
+      const popup = `
+        <div style="font-size:13px; min-width:200px;">
+          <strong style="font-size:14px; color:${dayColors[day]};">D${day} · ${name}</strong><br>
+          <span style="color:#666;">📅 4月${day + 2}日 · ⏰ ${time}</span><br>
+          <div style="margin-top:4px;">${desc}</div>
+        </div>
+      `;
+
+      L.marker([lat, lng], { icon }).addTo(map).bindPopup(popup);
+
+      if (!dayGroups[day]) dayGroups[day] = [];
+      dayGroups[day].push([lat, lng]);
+    });
+
+    // Draw dashed polylines connecting activities within each day
+    Object.entries(dayGroups).forEach(([day, coords]) => {
+      if (coords.length > 1) {
+        L.polyline(coords, {
+          color: dayColors[day],
+          weight: 2.5,
+          opacity: 0.6,
+          dashArray: '8, 6'
+        }).addTo(map);
+      }
+    });
+
+    // Fit map to all markers
+    const allCoords = activities.map(a => [a[0], a[1]]);
+    map.fitBounds(allCoords, { padding: [40, 40] });
+
+    // Legend
+    const legend = L.control({ position: 'topright' });
+    legend.onAdd = function() {
+      const div = L.DomUtil.create('div', 'legend');
+      let html = '<h4>📍 行程地图 · 张家界</h4>';
+      for (const [day, label] of Object.entries(dayLabels)) {
+        html += `<div class="legend-item"><span class="legend-dot" style="background:${dayColors[day]};"></span>${label}</div>`;
+      }
+      html += '<div style="margin-top:6px; font-size:11px; color:#999;">点击标记查看详情</div>';
+      div.innerHTML = html;
+      return div;
+    };
+    legend.addTo(map);
+  </script>
+</body>
+</html>

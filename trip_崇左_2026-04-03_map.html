@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <title>家庭行程地图 — 崇左 2026年4月</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif; }
+    #map { height: 100vh; width: 100%; }
+    .legend {
+      background: white;
+      padding: 12px 16px;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+      font-size: 13px;
+      line-height: 1.8;
+      max-width: 200px;
+    }
+    .legend h4 {
+      font-size: 14px;
+      font-weight: bold;
+      margin-bottom: 8px;
+      border-bottom: 1px solid #eee;
+      padding-bottom: 5px;
+    }
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 4px;
+    }
+    .legend-dot {
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      border: 2px solid rgba(0,0,0,0.3);
+    }
+    .popup-content { font-size: 13px; line-height: 1.6; min-width: 180px; }
+    .popup-content h3 { font-size: 15px; margin-bottom: 4px; color: #333; }
+    .popup-content .tag {
+      display: inline-block;
+      background: #f0f0f0;
+      border-radius: 4px;
+      padding: 1px 6px;
+      font-size: 11px;
+      margin-bottom: 6px;
+    }
+    .popup-content p { color: #555; }
+  </style>
+</head>
+<body>
+<div id="map"></div>
+
+<script>
+  // Initialize map centered on Chongzuo region
+  const map = L.map('map').setView([22.65, 107.1], 9);
+
+  // OpenStreetMap tiles (free, no API key)
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+    maxZoom: 18
+  }).addTo(map);
+
+  // Day color palette
+  const dayColors = {
+    1: '#4A90D9',   // Day 1 — blue
+    2: '#27AE60',   // Day 2 — green
+    3: '#E67E22',   // Day 3 — orange
+    4: '#E91E8C',   // Day 4 — pink
+    5: '#9B59B6',   // Day 5 — purple
+    6: '#78909C'    // Day 6 — grey (return)
+  };
+
+  // Create a colored circle marker
+  function createMarker(lat, lng, color, label, popupHtml) {
+    const icon = L.divIcon({
+      className: '',
+      html: `<div style="
+        background:${color};
+        width:32px;height:32px;
+        border-radius:50%;
+        border:3px solid white;
+        box-shadow:0 2px 6px rgba(0,0,0,0.4);
+        display:flex;align-items:center;justify-content:center;
+        font-size:10px;font-weight:bold;color:white;
+        text-align:center;line-height:1.2;
+        padding:2px;
+      ">${label}</div>`,
+      iconSize: [32, 32],
+      iconAnchor: [16, 16],
+      popupAnchor: [0, -18]
+    });
+    return L.marker([lat, lng], { icon }).bindPopup(popupHtml, { maxWidth: 260 });
+  }
+
+  // Star icon for hotel/overnight stops
+  function createHotelMarker(lat, lng, name, desc) {
+    const icon = L.divIcon({
+      className: '',
+      html: `<div style="
+        background:#FF6B35;
+        width:30px;height:30px;
+        border-radius:4px;
+        border:2px solid white;
+        box-shadow:0 2px 6px rgba(0,0,0,0.4);
+        display:flex;align-items:center;justify-content:center;
+        font-size:16px;
+      ">🏨</div>`,
+      iconSize: [30, 30],
+      iconAnchor: [15, 15],
+      popupAnchor: [0, -18]
+    });
+    const popup = `<div class="popup-content">
+      <h3>${name}</h3>
+      <span class="tag">住宿</span>
+      <p>${desc}</p>
+    </div>`;
+    return L.marker([lat, lng], { icon }).bindPopup(popup, { maxWidth: 260 });
+  }
+
+  // ─── All locations ───────────────────────────────────────────────────────────
+
+  const locations = [
+    // Day 1 — Travel
+    {
+      day: 1,
+      lat: 22.3043, lng: 114.1625,
+      label: 'D1\n出发',
+      name: '香港西九龙高铁站',
+      date: '4月3日',
+      time: '15:33出发',
+      desc: '乘坐G418高铁出发，全程约4小时抵达南宁东站'
+    },
+    {
+      day: 1,
+      lat: 22.8420, lng: 108.3560,
+      label: 'D1\n南宁',
+      name: '南宁东站',
+      date: '4月3日',
+      time: '19:32抵达',
+      desc: '转乘高铁前往崇左南站（约28分钟）'
+    },
+    {
+      day: 1,
+      lat: 22.3770, lng: 107.3140,
+      label: 'D1\n崇左',
+      name: '崇左南站',
+      date: '4月3日',
+      time: '约20:20抵达',
+      desc: '打车入住崇左市区酒店，一天旅途结束'
+    },
+
+    // Day 2 — Chongzuo city
+    {
+      day: 2,
+      lat: 22.3680, lng: 107.3320,
+      label: 'D2\n叶猴',
+      name: '白头叶猴生态旅游区',
+      date: '4月4日',
+      time: '10:00–12:30',
+      desc: '全球濒危白头叶猴，约400只在此栖息。票价约CNY 80/成人，1.2m以下免费。'
+    },
+    {
+      day: 2,
+      lat: 22.3800, lng: 107.3500,
+      label: 'D2\n老城',
+      name: '崇左老城区·左江滨河公园',
+      date: '4月4日',
+      time: '14:30–16:30',
+      desc: '漫步左江景观步道，参观壮锦文化展示，感受崇左本地生活'
+    },
+
+    // Day 3 — Huashan Rock Paintings
+    {
+      day: 3,
+      lat: 22.1610, lng: 107.0720,
+      label: 'D3\n花山',
+      name: '花山岩画景区',
+      date: '4月5日',
+      time: '10:30游船出发',
+      desc: 'UNESCO世界遗产！战国时期壁画，游船沿明江欣赏。船票CNY 90/人。2024年底荣升国家5A景区。'
+    },
+
+    // Day 4 — Mingshi
+    {
+      day: 4,
+      lat: 22.8350, lng: 107.2050,
+      label: 'D4\n明仕',
+      name: '明仕田园',
+      date: '4月6日',
+      time: '13:00–16:30',
+      desc: '"小桂林"！免费景区，可骑单车穿稻田（CNY 50/辆/小时），竹筏漂流沿明仕河赏峰林美景。'
+    },
+
+    // Day 5 — Detian Waterfall
+    {
+      day: 5,
+      lat: 22.8564, lng: 106.7219,
+      label: 'D5\n德天',
+      name: '德天跨国瀑布',
+      date: '4月7日',
+      time: '09:45–13:30',
+      desc: '亚洲第一跨国大瀑布！宽200m、落差70m，可远眺越南。票价CNY 229/成人（含观光车）。可乘竹筏至中越边界。'
+    },
+    {
+      day: 5,
+      lat: 22.8200, lng: 108.3200,
+      label: 'D5\n南宁',
+      name: '南宁市区（夜宿）',
+      date: '4月7日',
+      time: '17:00抵达',
+      desc: '从德天驾车约2.5–3小时抵达南宁，入住南宁东站附近酒店，逛中山路美食街'
+    },
+
+    // Day 6 — Return
+    {
+      day: 6,
+      lat: 22.8420, lng: 108.3560,
+      label: 'D6\n返港',
+      name: '南宁东站（返程）',
+      date: '4月8日',
+      time: '11:18出发 G417',
+      desc: '乘G417高铁返回香港西九龙，约15:18抵达，圆满结束行程！'
+    }
+  ];
+
+  // Hotel markers
+  const hotels = [
+    {
+      lat: 22.3850, lng: 107.3600,
+      name: '崇左市区酒店（第1–3晚）',
+      desc: '4月3–5日住宿，建议住友谊大道附近，预算CNY 300–500/晚'
+    },
+    {
+      lat: 22.8330, lng: 107.1980,
+      name: '大新县城酒店（第4晚）',
+      desc: '4月6日住宿，靠近明仕田园和德天瀑布，预算CNY 200–400/晚'
+    },
+    {
+      lat: 22.8150, lng: 108.3700,
+      name: '南宁东城区酒店（第5晚）',
+      desc: '4月7日住宿，靠近南宁东站，便于次日赶火车，预算CNY 400–500/晚'
+    }
+  ];
+
+  // ─── Render markers ──────────────────────────────────────────────────────────
+
+  const markersByDay = {};
+
+  locations.forEach(loc => {
+    const color = dayColors[loc.day];
+    const popupHtml = `<div class="popup-content">
+      <h3>${loc.name}</h3>
+      <span class="tag" style="background:${color};color:white;">第${loc.day}天 · ${loc.date}</span>
+      <p><strong>时间：</strong>${loc.time}</p>
+      <p style="margin-top:5px;">${loc.desc}</p>
+    </div>`;
+    const marker = createMarker(loc.lat, loc.lng, color, loc.label, popupHtml);
+    marker.addTo(map);
+
+    if (!markersByDay[loc.day]) markersByDay[loc.day] = [];
+    markersByDay[loc.day].push([loc.lat, loc.lng]);
+  });
+
+  hotels.forEach(h => {
+    createHotelMarker(h.lat, h.lng, h.name, h.desc).addTo(map);
+  });
+
+  // ─── Draw dashed polylines per day ───────────────────────────────────────────
+
+  Object.entries(markersByDay).forEach(([day, coords]) => {
+    if (coords.length < 2) return;
+    L.polyline(coords, {
+      color: dayColors[parseInt(day)],
+      weight: 2.5,
+      opacity: 0.7,
+      dashArray: '6, 8'
+    }).addTo(map);
+  });
+
+  // Also draw a thin grey line connecting across all days (journey overview)
+  const allCoords = locations.map(l => [l.lat, l.lng]);
+  L.polyline(allCoords, {
+    color: '#aaa',
+    weight: 1,
+    opacity: 0.3,
+    dashArray: '2, 6'
+  }).addTo(map);
+
+  // ─── Fit map to all markers ───────────────────────────────────────────────────
+
+  const allLatLngs = locations.map(l => [l.lat, l.lng]);
+  map.fitBounds(L.latLngBounds(allLatLngs).pad(0.1));
+
+  // ─── Legend ──────────────────────────────────────────────────────────────────
+
+  const legend = L.control({ position: 'bottomright' });
+  legend.onAdd = function () {
+    const div = L.DomUtil.create('div', 'legend');
+    div.innerHTML = `
+      <h4>行程图例</h4>
+      <div class="legend-item"><div class="legend-dot" style="background:${dayColors[1]}"></div> 第1天 4/3 出发日</div>
+      <div class="legend-item"><div class="legend-dot" style="background:${dayColors[2]}"></div> 第2天 4/4 崇左市区</div>
+      <div class="legend-item"><div class="legend-dot" style="background:${dayColors[3]}"></div> 第3天 4/5 花山岩画</div>
+      <div class="legend-item"><div class="legend-dot" style="background:${dayColors[4]}"></div> 第4天 4/6 明仕田园</div>
+      <div class="legend-item"><div class="legend-dot" style="background:${dayColors[5]}"></div> 第5天 4/7 德天瀑布</div>
+      <div class="legend-item"><div class="legend-dot" style="background:${dayColors[6]}"></div> 第6天 4/8 返港</div>
+      <div class="legend-item"><div style="width:14px;height:14px;border-radius:3px;background:#FF6B35;font-size:11px;display:flex;align-items:center;justify-content:center;">🏨</div> 住宿地点</div>
+      <hr style="margin:6px 0;border-color:#eee;">
+      <div style="font-size:11px;color:#888;">点击标记查看详情</div>
+    `;
+    return div;
+  };
+  legend.addTo(map);
+
+  // ─── Title overlay ────────────────────────────────────────────────────────────
+
+  const titleCtrl = L.control({ position: 'topleft' });
+  titleCtrl.onAdd = function () {
+    const div = L.DomUtil.create('div', 'legend');
+    div.innerHTML = `
+      <h4 style="font-size:16px;">崇左家庭亲子游</h4>
+      <div style="font-size:12px;color:#555;">2026年4月3日 — 4月8日</div>
+      <div style="font-size:12px;color:#555;">香港出发 · 一家四口</div>
+    `;
+    return div;
+  };
+  titleCtrl.addTo(map);
+</script>
+</body>
+</html>
