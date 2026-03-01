@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <title>家庭行程地图 — 桂林 2026年4月</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif; }
+    #map { height: 100vh; width: 100%; }
+    .legend {
+      background: white;
+      padding: 12px 16px;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+      font-size: 13px;
+      line-height: 1.8;
+      max-width: 210px;
+    }
+    .legend h4 {
+      font-size: 14px;
+      font-weight: bold;
+      margin-bottom: 8px;
+      border-bottom: 1px solid #eee;
+      padding-bottom: 5px;
+    }
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 4px;
+    }
+    .legend-dot {
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      border: 2px solid rgba(0,0,0,0.25);
+    }
+    .popup-content { font-size: 13px; line-height: 1.6; min-width: 190px; }
+    .popup-content h3 { font-size: 15px; margin-bottom: 4px; color: #333; }
+    .popup-content .tag {
+      display: inline-block;
+      border-radius: 4px;
+      padding: 1px 7px;
+      font-size: 11px;
+      color: white;
+      margin-bottom: 6px;
+    }
+    .popup-content p { color: #555; margin-top: 3px; }
+  </style>
+</head>
+<body>
+<div id="map"></div>
+<script>
+  // Day colors
+  const dayColors = {
+    1: '#4A90D9',   // Day 1 — blue (travel)
+    2: '#27AE60',   // Day 2 — green (Guilin city)
+    3: '#E67E22',   // Day 3 — orange (Longji)
+    4: '#9B59B6',   // Day 4 — purple (Li River + Yangshuo)
+    5: '#E91E63'    // Day 5 — pink (Yulong River + return)
+  };
+
+  // Initialize map centered on Guilin region
+  const map = L.map('map').setView([25.1, 110.3], 9);
+
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+    maxZoom: 18
+  }).addTo(map);
+
+  // Colored circle marker factory
+  function createMarker(lat, lng, color, label, popupHtml) {
+    const lines = label.split('\n');
+    const html = lines.map(l => `<div>${l}</div>`).join('');
+    const icon = L.divIcon({
+      className: '',
+      html: `<div style="
+        background:${color};
+        min-width:34px;height:34px;
+        border-radius:50%;
+        border:3px solid white;
+        box-shadow:0 2px 6px rgba(0,0,0,0.4);
+        display:flex;flex-direction:column;
+        align-items:center;justify-content:center;
+        font-size:9px;font-weight:bold;color:white;
+        text-align:center;padding:2px;line-height:1.2;
+      ">${html}</div>`,
+      iconSize: [34, 34],
+      iconAnchor: [17, 17],
+      popupAnchor: [0, -20]
+    });
+    return L.marker([lat, lng], { icon }).bindPopup(popupHtml, { maxWidth: 270 });
+  }
+
+  function createHotelMarker(lat, lng, name, desc) {
+    const icon = L.divIcon({
+      className: '',
+      html: `<div style="
+        background:#FF6B35;width:30px;height:30px;
+        border-radius:5px;border:2px solid white;
+        box-shadow:0 2px 6px rgba(0,0,0,0.4);
+        display:flex;align-items:center;justify-content:center;font-size:16px;">🏨</div>`,
+      iconSize: [30, 30],
+      iconAnchor: [15, 15],
+      popupAnchor: [0, -18]
+    });
+    return L.marker([lat, lng], { icon }).bindPopup(`
+      <div class="popup-content">
+        <h3>${name}</h3>
+        <span class="tag" style="background:#FF6B35;">住宿</span>
+        <p>${desc}</p>
+      </div>`, { maxWidth: 260 });
+  }
+
+  // --- All activity locations ---
+  const locations = [
+    // Day 1 — travel & arrival
+    {
+      day: 1, lat: 29.352, lng: 117.191,
+      label: 'D1\n出发', name: '景德镇北站',
+      date: '4月7日', time: '约08:30出发',
+      desc: '出发！乘高铁至南昌东，再转车前往桂林'
+    },
+    {
+      day: 1, lat: 25.320, lng: 110.330,
+      label: 'D1\n抵达', name: '桂林北站',
+      date: '4月7日', time: '约15:30抵达',
+      desc: '抵达桂林北站，打车入住市区酒店，傍晚漫步漓江滨江路'
+    },
+
+    // Day 2 — Guilin city
+    {
+      day: 2, lat: 25.278, lng: 110.287,
+      label: 'D2\n象鼻山', name: '象鼻山景区',
+      date: '4月8日', time: '09:00–11:00',
+      desc: '桂林城徽！漓江与桃花江交汇处，大象形状的山。CNY 75/成人，CNY 37.5/儿童。'
+    },
+    {
+      day: 2, lat: 25.330, lng: 110.245,
+      label: 'D2\n芦笛岩', name: '芦笛岩溶洞',
+      date: '4月8日', time: '13:00–14:30',
+      desc: '彩灯照亮的地下奇幻世界！钟乳石造型各异，孩子必爱。CNY 90/成人，CNY 45/儿童。'
+    },
+    {
+      day: 2, lat: 25.264, lng: 110.312,
+      label: 'D2\n七星公园', name: '七星公园+七星岩',
+      date: '4月8日', time: '15:00–17:00',
+      desc: '桂林最大城市公园，含骆驼山、大熊猫馆、七星岩溶洞。CNY 75/成人。'
+    },
+    {
+      day: 2, lat: 25.281, lng: 110.291,
+      label: 'D2\n夜游', name: '两江四湖夜游',
+      date: '4月8日', time: '19:30–21:30',
+      desc: '灯光璀璨！桂林城内水系夜间游览，古桥倒影如仙境。CNY 200/成人，CNY 100/儿童。'
+    },
+
+    // Day 3 — Longji Rice Terraces
+    {
+      day: 3, lat: 25.796, lng: 110.098,
+      label: 'D3\n龙脊梯田', name: '龙脊梯田·金坑大寨',
+      date: '4月9日', time: '10:00–16:00',
+      desc: '4月梯田注水，波光粼粼！壮族/瑶族少数民族文化。CNY 100/成人，CNY 50/儿童。包车约CNY 450/辆。'
+    },
+
+    // Day 4 — Li River + Yangshuo
+    {
+      day: 4, lat: 25.064, lng: 110.330,
+      label: 'D4\n竹江码头', name: '竹江码头（漓江游船出发处）',
+      date: '4月10日', time: '09:20出发',
+      desc: '漓江游船起点！3星船CNY 215/成人，4星船CNY 360+/成人。全程4.5小时，抵达阳朔。'
+    },
+    {
+      day: 4, lat: 24.780, lng: 110.488,
+      label: 'D4\n阳朔', name: '阳朔西街+骑行',
+      date: '4月10日', time: '14:00–17:30',
+      desc: '阳朔古街！租自行车骑行田间（CNY 20–30/辆），欣赏峰林田野，悠然自在。'
+    },
+
+    // Day 5 — Yulong River + return
+    {
+      day: 5, lat: 24.730, lng: 110.390,
+      label: 'D5\n遇龙河', name: '遇龙河竹筏漂流',
+      date: '4月11日', time: '09:00–11:00',
+      desc: '峰林倒映水中！竹筏穿越小坝水花四溅，孩子超爱。CNY 200/筏（2人），家庭4人需2筏。'
+    },
+    {
+      day: 5, lat: 25.320, lng: 110.330,
+      label: 'D5\n返程', name: '桂林北站（返程出发）',
+      date: '4月11日', time: '约14:30出发',
+      desc: '乘高铁返回：桂林北→南昌东→景德镇北，约晚上20:30抵达景德镇。旅程完结！'
+    }
+  ];
+
+  // Hotels
+  const hotels = [
+    {
+      lat: 25.280, lng: 110.288,
+      name: '桂林市区酒店（第1–2晚）',
+      desc: '4月7日–8日，建议住象山区/秀峰区近漓江，预算CNY 350–500/晚'
+    },
+    {
+      lat: 24.780, lng: 110.492,
+      name: '阳朔西街民宿（第3晚）',
+      desc: '4月10日，西街一带精品客栈，预算CNY 400–700/晚，建议提前预订'
+    }
+  ];
+
+  // Render markers and collect coordinates for day lines
+  const dayCoords = {};
+  locations.forEach(loc => {
+    const color = dayColors[loc.day];
+    const popup = `<div class="popup-content">
+      <h3>${loc.name}</h3>
+      <span class="tag" style="background:${color};">第${loc.day}天 · ${loc.date}</span>
+      <p><strong>时间：</strong>${loc.time}</p>
+      <p style="margin-top:5px;">${loc.desc}</p>
+    </div>`;
+    createMarker(loc.lat, loc.lng, color, loc.label, popup).addTo(map);
+    if (!dayCoords[loc.day]) dayCoords[loc.day] = [];
+    dayCoords[loc.day].push([loc.lat, loc.lng]);
+  });
+
+  hotels.forEach(h => createHotelMarker(h.lat, h.lng, h.name, h.desc).addTo(map));
+
+  // Dashed polylines per day
+  Object.entries(dayCoords).forEach(([day, coords]) => {
+    if (coords.length < 2) return;
+    L.polyline(coords, {
+      color: dayColors[parseInt(day)],
+      weight: 2.5,
+      opacity: 0.7,
+      dashArray: '7, 8'
+    }).addTo(map);
+  });
+
+  // Faint overall journey line
+  const all = locations.map(l => [l.lat, l.lng]);
+  L.polyline(all, { color: '#bbb', weight: 1, opacity: 0.3, dashArray: '2, 7' }).addTo(map);
+
+  // Fit bounds
+  map.fitBounds(L.latLngBounds(all).pad(0.1));
+
+  // Legend
+  const legend = L.control({ position: 'bottomright' });
+  legend.onAdd = function () {
+    const div = L.DomUtil.create('div', 'legend');
+    div.innerHTML = `
+      <h4>行程图例</h4>
+      <div class="legend-item"><div class="legend-dot" style="background:${dayColors[1]}"></div> 第1天 4/7 出发·抵达</div>
+      <div class="legend-item"><div class="legend-dot" style="background:${dayColors[2]}"></div> 第2天 4/8 桂林城区</div>
+      <div class="legend-item"><div class="legend-dot" style="background:${dayColors[3]}"></div> 第3天 4/9 龙脊梯田</div>
+      <div class="legend-item"><div class="legend-dot" style="background:${dayColors[4]}"></div> 第4天 4/10 漓江·阳朔</div>
+      <div class="legend-item"><div class="legend-dot" style="background:${dayColors[5]}"></div> 第5天 4/11 遇龙河·返程</div>
+      <div class="legend-item"><div style="width:14px;height:14px;border-radius:3px;background:#FF6B35;font-size:11px;display:flex;align-items:center;justify-content:center;">🏨</div> 住宿地点</div>
+      <hr style="margin:6px 0;border-color:#eee;">
+      <div style="font-size:11px;color:#888;">点击标记查看详情</div>
+    `;
+    return div;
+  };
+  legend.addTo(map);
+
+  // Title
+  const title = L.control({ position: 'topleft' });
+  title.onAdd = function () {
+    const div = L.DomUtil.create('div', 'legend');
+    div.innerHTML = `
+      <h4 style="font-size:16px;">桂林家庭亲子游</h4>
+      <div style="font-size:12px;color:#555;">2026年4月7日 — 4月11日</div>
+      <div style="font-size:12px;color:#555;">景德镇出发 · 一家四口</div>
+    `;
+    return div;
+  };
+  title.addTo(map);
+</script>
+</body>
+</html>
