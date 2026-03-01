@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>行程地图：景德镇 - 婺源 - 黄山</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <style>
+    #map { height: 100vh; width: 100%; }
+    .legend {
+      background: white;
+      padding: 10px;
+      border-radius: 5px;
+      box-shadow: 0 1px 5px rgba(0,0,0,0.4);
+      font-size: 12px;
+      line-height: 1.6;
+    }
+    .legend-title {
+      font-weight: bold;
+      font-size: 14px;
+      margin-bottom: 5px;
+    }
+    .legend-color {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      margin-right: 5px;
+      vertical-align: middle;
+    }
+    .hotel-icon {
+      font-size: 20px;
+      text-align: center;
+      line-height: 1;
+    }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+  <script>
+    // Initialize map centered on the trip region
+    const map = L.map('map').setView([29.3, 118.0], 9);
+
+    // Add OpenStreetMap tiles
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap contributors'
+    }).addTo(map);
+
+    // Day colors
+    const dayColors = {
+      1: '#1E90FF',  // blue
+      2: '#32CD32',  // green
+      3: '#FF8C00',  // orange
+      4: '#FF4500',  // red
+      5: '#9370DB',  // purple
+      6: '#708090',  // gray
+      7: '#FF1493',  // pink
+      8: '#20B2AA',  // light sea green
+      9: '#FFD700'   // gold
+    };
+
+    // Activities with coordinates (latitude, longitude)
+    const activities = [
+      // Day 1: 香港→深圳→景德镇
+      { day: 1, name: "深圳机场", lat: 22.6393, lng: 113.8107, time: "12:00", desc: "转机前往景德镇" },
+      { day: 1, name: "景德镇市区", lat: 29.2948, lng: 117.2144, time: "18:00", desc: "抵达景德镇，入住酒店" },
+
+      // Day 2: 景德镇陶瓷文化日
+      { day: 2, name: "中国陶瓷博物馆", lat: 29.2850, lng: 117.2150, time: "10:00", desc: "中国最大陶瓷专题博物馆" },
+      { day: 2, name: "古窑民俗博览区", lat: 29.2700, lng: 117.2300, time: "14:00", desc: "制陶体验，观看非遗表演" },
+      { day: 2, name: "陶溪川文创园", lat: 29.2900, lng: 117.2200, time: "19:30", desc: "老瓷厂改造的创意园区" },
+
+      // Day 3: 景德镇→婺源
+      { day: 3, name: "李坑水乡", lat: 29.3850, lng: 117.8200, time: "14:00", desc: "小桥流水人家，徽派建筑" },
+      { day: 3, name: "江岭梯田民宿", lat: 29.4500, lng: 117.9100, time: "17:30", desc: "入住花海梯田民宿" },
+
+      // Day 4: 婺源油菜花深度游
+      { day: 4, name: "江岭梯田观景台", lat: 29.4550, lng: 117.9150, time: "09:30", desc: "油菜花海最佳拍摄点" },
+      { day: 4, name: "篁岭古村", lat: 29.3200, lng: 117.8800, time: "14:00", desc: "缆车体验，晒秋文化" },
+
+      // Day 5: 婺源→宏村
+      { day: 5, name: "汪口古村", lat: 29.3600, lng: 117.7900, time: "10:00", desc: "渔村风情，徽派建筑" },
+      { day: 5, name: "宏村月沼", lat: 30.0007, lng: 117.9920, time: "15:30", desc: "画里乡村，《卧虎藏龙》取景地" },
+
+      // Day 6: 宏村→西递→黄山
+      { day: 6, name: "西递古村", lat: 29.9050, lng: 117.9900, time: "10:00", desc: "明清建筑，石雕艺术" },
+      { day: 6, name: "云谷寺缆车", lat: 30.1050, lng: 118.1750, time: "15:30", desc: "乘缆车上黄山" },
+      { day: 6, name: "北海宾馆", lat: 30.1400, lng: 118.1700, time: "17:00", desc: "入住黄山山顶酒店" },
+
+      // Day 7: 黄山核心景区
+      { day: 7, name: "始信峰", lat: 30.1450, lng: 118.1850, time: "09:00", desc: "不到始信峰，不见黄山松" },
+      { day: 7, name: "狮子峰", lat: 30.1500, lng: 118.1650, time: "11:00", desc: "猴子观海" },
+      { day: 7, name: "飞来石", lat: 30.1300, lng: 118.1550, time: "14:00", desc: "红楼梦取景地" },
+      { day: 7, name: "迎客松", lat: 30.1150, lng: 118.1650, time: "16:00", desc: "黄山标志性景观" },
+      { day: 7, name: "汤口温泉酒店", lat: 30.0850, lng: 118.1850, time: "18:30", desc: "泡温泉缓解疲劳" },
+
+      // Day 8: 黄山→景德镇
+      { day: 8, name: "陶溪川文创园", lat: 29.2900, lng: 117.2200, time: "14:00", desc: "创意园区购物" },
+
+      // Day 9: 返程
+      { day: 9, name: "景德镇机场", lat: 29.3333, lng: 117.1750, time: "16:00", desc: "返程航班" }
+    ];
+
+    // Hotel locations
+    const hotels = [
+      { name: "景德镇酒店", lat: 29.2948, lng: 117.2144, nights: "第 1-2 晚" },
+      { name: "江岭梯田民宿", lat: 29.4500, lng: 117.9100, nights: "第 3-4 晚" },
+      { name: "宏村民宿", lat: 30.0007, lng: 117.9920, nights: "第 5 晚" },
+      { name: "黄山北海宾馆", lat: 30.1400, lng: 118.1700, nights: "第 6 晚" },
+      { name: "汤口温泉酒店", lat: 30.0850, lng: 118.1850, nights: "第 7 晚" },
+      { name: "景德镇酒店", lat: 29.2948, lng: 117.2144, nights: "第 8 晚" }
+    ];
+
+    // Create custom colored circle markers
+    function createMarkerIcon(color) {
+      return L.divIcon({
+        className: 'custom-marker',
+        html: `<div style="
+          background-color: ${color};
+          width: 16px;
+          height: 16px;
+          border-radius: 50%;
+          border: 3px solid white;
+          box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+        "></div>`,
+        iconSize: [22, 22],
+        iconAnchor: [11, 11]
+      });
+    }
+
+    // Hotel icon
+    const hotelIcon = L.divIcon({
+      className: 'hotel-icon',
+      html: '<div style="font-size:24px;text-align:center;">🏨</div>',
+      iconSize: [30, 30],
+      iconAnchor: [15, 15]
+    });
+
+    // Add activity markers
+    activities.forEach((activity, index) => {
+      const color = dayColors[activity.day];
+      const marker = L.marker([activity.lat, activity.lng], {
+        icon: createMarkerIcon(color)
+      }).addTo(map);
+
+      marker.bindPopup(`
+        <strong>${activity.name}</strong><br>
+        <b>日期：</b>第${activity.day}天 (2026-04-${String(activity.day + 2).padStart(2, '0')})<br>
+        <b>时间：</b>${activity.time}<br>
+        <b>简介：</b>${activity.desc}
+      `);
+    });
+
+    // Add hotel markers
+    hotels.forEach(hotel => {
+      const marker = L.marker([hotel.lat, hotel.lng], {
+        icon: hotelIcon
+      }).addTo(map);
+
+      marker.bindPopup(`
+        <strong>${hotel.name}</strong><br>
+        <b>住宿：</b>${hotel.nights}
+      `);
+    });
+
+    // Draw lines connecting activities by day
+    for (let day = 1; day <= 9; day++) {
+      const dayActivities = activities.filter(a => a.day === day);
+      if (dayActivities.length > 1) {
+        const latlngs = dayActivities.map(a => [a.lat, a.lng]);
+        L.polyline(latlngs, {
+          color: dayColors[day],
+          weight: 2,
+          opacity: 0.7,
+          dashArray: '5, 5'
+        }).addTo(map);
+      }
+    }
+
+    // Create legend
+    const legend = L.control({ position: 'bottomright' });
+    legend.onAdd = function(map) {
+      const div = L.DomUtil.create('div', 'legend');
+      let html = '<div class="legend-title">行程图例</div>';
+
+      // Day colors
+      for (let day = 1; day <= 9; day++) {
+        const date = `4/${day + 2}`;
+        html += `<div><span class="legend-color" style="background-color: ${dayColors[day]}"></span>第${day}天 (${date})</div>`;
+      }
+
+      html += '<div style="margin-top:8px;"><span class="legend-title">🏨</span> 酒店住宿</div>';
+
+      div.innerHTML = html;
+      return div;
+    };
+    legend.addTo(map);
+
+    // Fit bounds to show all markers
+    const allPoints = activities.map(a => [a.lat, a.lng]);
+    map.fitBounds(allPoints, { padding: [50, 50] });
+  </script>
+</body>
+</html>
